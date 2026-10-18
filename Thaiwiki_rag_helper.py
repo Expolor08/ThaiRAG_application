@@ -1,4 +1,3 @@
-"""Thai RAG chatbot over Thai Wikipedia: retrieval from Thaiwiki_ingest + Gemini."""
 from google import genai
 from google.genai import types
  
@@ -23,8 +22,6 @@ CONTEXT:
 {context}
 '''.strip()
  
-# How much each field counts in the search. Matching the section heading is a strong
-# signal, the page title is the same for every passage of a page so it is not boosted.
 BOOST = {"title": 1.0, "section": 2.0, "text": 1.0}
  
  
@@ -93,9 +90,9 @@ class RAGBase:
  
  
 if __name__ == "__main__":
-    documents = load_documents()        # scrapes missing pages once, then uses the cache
+    documents = load_documents()        
     index = build_index(documents)
-    client = genai.Client()             # reads GEMINI_API_KEY from the environment
+    client = genai.Client()             
  
     rag = RAGBase(index, client)
     print(rag.rag("เมืองหลวงของประเทศไทยคืออะไร"))

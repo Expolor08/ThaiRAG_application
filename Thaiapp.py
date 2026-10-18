@@ -5,7 +5,7 @@ from google import genai
 from Thaiwiki_ingest import CACHE_FILE, add_page, build_index, load_documents
 from Thaiwiki_rag_helper import NOT_FOUND, RAGBase
 
-load_dotenv()  # reads GEMINI_API_KEY from .env
+load_dotenv()  
 
 st.set_page_config(page_title="Thai chatbot from Thai Wikipedia", page_icon="🇹🇭")
 

@@ -1,23 +1,3 @@
-"""Thai Wikipedia ingest for the RAG chatbot.
-
-Each Wikipedia page is split along its headings into passages. One document:
-
-    {
-      "id": "ประเทศไทย#12",
-      "title": "ประเทศไทย",                      # the Wikipedia page
-      "section": "ภูมิศาสตร์ > ภูมิอากาศ",          # heading path inside the page
-      "text": "...",                              # the passage itself
-      "url": "https://th.wikipedia.org/wiki/...#...",   # deep link to the section
-      "requested_title": "ประเทศไทย"               # what you asked for (cache key)
-    }
-
-Setup:  uv add requests minsearch pythainlp
-Run:    python Thaiwiki_ingest.py            # scrape missing pages, build index, test search
-        python Thaiwiki_ingest.py --refresh  # scrape every page again
-
-The cache (thaiwiki_documents.jsonl) is incremental: add a title to TITLES and only
-that page is scraped next time. Pages added with add_page() are kept as well.
-"""
 import hashlib
 import json
 import re
@@ -28,21 +8,21 @@ from urllib.parse import quote
 
 import requests
 from minsearch import Index
-from pythainlp.tokenize import word_tokenize  # no silent fallback: fail loudly if missing
+from pythainlp.tokenize import word_tokenize  
 
 # ---------------------------------------------------------------- settings
 API = "https://th.wikipedia.org/w/api.php"
 WIKI_URL = "https://th.wikipedia.org/wiki/"
 HEADERS = {"User-Agent": "thai-rag-learning-project/0.2 (personal study project)"}
 CACHE_FILE = Path("thaiwiki_documents.jsonl")
-DELAY_SECONDS = 1.0     # pause between page requests (be polite)
+DELAY_SECONDS = 1.0     
 
-MAX_CHARS = 800         # max characters per passage (Thai has no spaces, so count characters)
-MIN_CHARS = 40          # drop passages shorter than this (stubs, leftover headings)
-OVERLAP_MAX = 200       # repeat the last paragraph of a passage at the start of the next one
-                        # if it is at most this long, so facts at the boundary are not lost
+MAX_CHARS = 800         
+MIN_CHARS = 40          
+OVERLAP_MAX = 200       
+                        
 
-# Seed pages. Titles that do not exist are skipped with a warning.
+
 TITLES = [
     "ประเทศไทย",
     "กรุงเทพมหานคร",
@@ -56,7 +36,6 @@ TITLES = [
     "ศาสนาในประเทศไทย",
 ]
 
-# Sections that are lists of links or references and only add noise to retrieval.
 SKIP_SECTIONS = {
     "อ้างอิง", "เชิงอรรถ", "หมายเหตุ", "บรรณานุกรม", "แหล่งข้อมูลอื่น",
     "ดูเพิ่ม", "อ่านเพิ่ม", "ลิงก์ภายนอก", "เว็บไซต์ที่เกี่ยวข้อง",
@@ -72,7 +51,7 @@ def fetch_page(title):
         "action": "query",
         "format": "json",
         "prop": "extracts",
-        "explaintext": 1,            # plain text instead of HTML
+        "explaintext": 1,            
         "exsectionformat": "wiki",   # headings as '== หัวข้อ =='
         "redirects": 1,
         "titles": title,
@@ -93,7 +72,7 @@ def parse_sections(text):
     ['ภูมิศาสตร์', 'ภูมิอากาศ']. The introduction has an empty path.
     """
     sections = []
-    path = []   # [(level, heading), ...]
+    path = []  
     buf = []
 
     def flush():
@@ -192,7 +171,7 @@ def write_cache(documents):
     with tmp.open("w", encoding="utf-8") as f:
         for doc in documents:
             f.write(json.dumps(doc, ensure_ascii=False) + "\n")
-    tmp.replace(CACHE_FILE)  # replace in one step so an interrupted run cannot corrupt the cache
+    tmp.replace(CACHE_FILE)  
 
 
 def scrape_pages(titles, known_titles=()):
@@ -263,7 +242,7 @@ def tokenize_thai(text):
     """
     tokens = []
     for w in word_tokenize(text, engine="newmm", keep_whitespace=False):
-        if any(ch.isalnum() for ch in w):  # drop pure punctuation
+        if any(ch.isalnum() for ch in w):  
             tokens.append("t" + hashlib.md5(w.lower().encode("utf-8")).hexdigest()[:10])
     return " ".join(tokens)
 
@@ -286,7 +265,7 @@ class ThaiIndex:
     def fit(self, documents):
         indexed = []
         for doc in documents:
-            item = dict(doc)  # original fields stay untouched
+            item = dict(doc)  
             for f in self.FIELDS:
                 item[f"{f}_tok"] = tokenize_thai(doc[f])
             indexed.append(item)
