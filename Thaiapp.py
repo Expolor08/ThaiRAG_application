@@ -10,16 +10,14 @@ load_dotenv()  # reads GEMINI_API_KEY from .env
 st.set_page_config(page_title="Thai chatbot from Thai Wikipedia", page_icon="🇹🇭")
 
 
-@st.cache_resource(show_spinner="กำลังโหลดข้อมูลและสร้างดัชนี...")
+@st.cache_resource(show_spinner="loading...")
 def load_chatbot():
-    """Load passages (scrapes only missing pages), build the index, create the bot."""
     documents = load_documents()
     index = build_index(documents)
     client = genai.Client()  # raises if GEMINI_API_KEY is missing
     return RAGBase(index, client), documents
 
 
-# ----------------------------------------------------------------- load bot
 try:
     chatbot, documents = load_chatbot()
 except Exception as exc:
@@ -32,7 +30,6 @@ except Exception as exc:
 
 pages = sorted({d["title"] for d in documents})
 
-# ----------------------------------------------------------------- sidebar
 with st.sidebar:
     st.header("ตั้งค่า")
 
@@ -43,7 +40,6 @@ with st.sidebar:
     page_filter = None if page_filter == "ทุกหน้า" else page_filter
     num_results = st.slider("จำนวนข้อความที่ค้นหา", min_value=1, max_value=10, value=5)
     chatbot.model = st.text_input("Gemini model", value=chatbot.model)
-    st.caption(f"ฐานความรู้: {len(documents)} ข้อความจาก {len(pages)} หน้า")
 
     with st.form("add_page", clear_on_submit=True):
         new_title = st.text_input("เพิ่มหน้า Thai Wikipedia (ชื่อหน้า)")
@@ -60,21 +56,19 @@ with st.sidebar:
         except Exception as exc:
             st.error(f"เพิ่มหน้าไม่สำเร็จ: {exc}")
 
-    if st.button("ดึงข้อมูลทุกหน้าใหม่"):
-        with st.spinner("กำลังดึงข้อมูลใหม่..."):
+    if st.button("โหลดข้อมูลใหม่"):
+        with st.spinner("loading..."):
             load_documents(refresh=True)
         st.cache_resource.clear()
         st.rerun()
 
-    if st.button("ล้างการสนทนา"):
+    if st.button("ล้างประวัติการสนทนา"):
         st.session_state.messages = []
         st.rerun()
 
-    st.caption(f"ไฟล์แคช: {CACHE_FILE}")
 
-# ----------------------------------------------------------------- chat
-st.title("🇹🇭 แชทบอทความรู้จาก Thai Wikipedia")
-st.caption("ตอบจากข้อมูล Thai Wikipedia เท่านั้น")
+st.title("Thai Wikipedia Chatbot")
+st.caption("ถามอะไรก็ได้เกี่ยวกับประเทศไทย")
 
 
 def show_sources(sources):
@@ -94,13 +88,13 @@ for msg in st.session_state.messages:
         if msg["role"] == "assistant":
             show_sources(msg.get("sources"))
 
-if question := st.chat_input("ถามอะไรก็ได้ที่อยู่ใน Thai Wikipedia..."):
+if question := st.chat_input("..."):
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.markdown(question)
 
     with st.chat_message("assistant"):
-        with st.spinner("กำลังค้นหาคำตอบ..."):
+        with st.spinner("Thinking..."):
             try:
                 results = chatbot.search(question, num_results=num_results, title=page_filter)
                 if results:
